@@ -1,6 +1,9 @@
 import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import * as dotenv from 'dotenv';
+
+dotenv.config(); // Esto carga las variables de entorno desde el archivo .env
 
 async function bootstrap() {
   const logger = new Logger('MAIN');
@@ -9,6 +12,8 @@ async function bootstrap() {
   app.enableCors();
 
   app.setGlobalPrefix('api');
+
+  
 
   app.useGlobalPipes(
     new ValidationPipe({
