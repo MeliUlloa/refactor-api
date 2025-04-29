@@ -1,6 +1,6 @@
 import { PublicRoute } from '@/common/decorators/public.decorator';
 import { Owner } from '@/common/decorators/user.decorator';
-import { CreateUserDto } from '@/users/create-user.dto';
+import { CreateUserDto } from '@/users/dto/create-user.dto';
 import {
   BadRequestException,
   Body,

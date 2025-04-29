@@ -7,6 +7,7 @@ import { NeighborhoodModule } from './neighborhood/neighborhood.module';
 import { CityModule } from './city/city.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { join } from 'path';
         : join(__dirname, '..', 'uploads'),
       serveRoot: '/api/uploads',
     }),
+    PrismaModule,
   ],
   providers: [{ provide: 'APP_GUARD', useClass: JWTGuard }],
 })
