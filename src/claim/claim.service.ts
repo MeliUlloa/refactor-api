@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '@/common/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { CreateClaimDto } from './dto/create-claim.dto';
 import { ClaimPaginatorDto } from './dto/claim-paginator.dto';
 
@@ -19,13 +19,35 @@ export class ClaimService {
 
   // Obtener reclamos con paginación y filtros
   async getClaims(paginator: ClaimPaginatorDto) {
-    const { page, perPage, ...filters } = paginator;
+    const { page, perPage, neighborhood, clientName, ...rest } = paginator;
+  
+    const where: any = {
+      ...rest,
+    };
+  
+    if (clientName) {
+      where.clientName = {
+        contains: clientName,
+        mode: 'insensitive',
+      };
+    }
+  
+    if (neighborhood) {
+      where.neighborhood = {
+        name: {
+          contains: neighborhood,
+          mode: 'insensitive',
+        },
+      };
+    }
+  
     return this.prisma.claim.findMany({
-      where: filters,
+      where,
       skip: page && perPage ? (page - 1) * perPage : undefined,
       take: perPage,
     });
   }
+  
 
   // Obtener un solo reclamo por ID
   async getClaimById(id: string) {

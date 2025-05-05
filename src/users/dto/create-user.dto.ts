@@ -1,38 +1,35 @@
-import { IsOptional } from 'class-validator';
+import { IsString, IsBoolean, IsOptional, IsEmail, MinLength } from 'class-validator';
 
 export class CreateUserDto {
+  @IsString()
   @IsOptional()
-  id_visible: number;
-  @IsOptional()
+  id_visible?: number;
+
+  @IsString()
+  @MinLength(5)
   username: string;
-  @IsOptional()
+
+  @IsEmail()
   mail: string;
-  @IsOptional()
+
+  @IsString()
+  @MinLength(6)
   password: string;
-  @IsOptional()
+
+  @IsString()
   name?: string;
-  @IsOptional()
+
+  @IsString()
   last_name?: string;
-  @IsOptional()
-  id_user?: string;
-  @IsOptional()
-  updateCityID: string[];
-  @IsOptional()
-  id?: string;
-  @IsOptional()
-  deleted?: boolean = false;
-  @IsOptional()
+
+  @IsBoolean()
   active?: boolean = true;
+
   @IsOptional()
-  otp?: boolean;
+  @IsString({ each: true })
+  updateCityID?: string[];
+
   @IsOptional()
-  root?: boolean;
-  @IsOptional()
-  createdDate: Date;
-  @IsOptional()
-  deleteDate?: Date;
-  @IsOptional()
-  old_password: string;
-  @IsOptional()
-  deletedCityID: string[];
+  @IsString()
+  id_user?: string;
 }

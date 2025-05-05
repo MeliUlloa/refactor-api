@@ -1,38 +1,19 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { IsOptional } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 
-export class PaginatorDto {
+export class UserPaginatorDto {
   @IsOptional()
-  page: number;
-  @IsOptional()
-  perPage: number;
-  @IsOptional()
-  sortBy: string;
-  @IsOptional()
-  sortByProperty: string;
-  @IsOptional()
-  cityID: string;
-  @IsOptional()
-  from: Date;
-  @IsOptional()
-  to: Date;
-  @IsOptional()
-  cityIDs: string[];
-}
+  @IsString()
+  page?: string;
 
-export class UserPaginator extends PartialType(PaginatorDto) {
   @IsOptional()
-  id: number;
+  @IsString()
+  perPage?: string;
+
   @IsOptional()
-  name: string;
+  @IsString()
+  sortBy?: string;
+
   @IsOptional()
-  username: string;
-  @IsOptional()
-  mail: string;
-  @IsOptional()
-  delete: boolean;
-  @IsOptional()
-  active: boolean;
-  @IsOptional()
-  root: boolean;
+  @IsString()
+  sortByProperty?: string;
 }

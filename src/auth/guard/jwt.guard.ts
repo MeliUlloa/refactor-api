@@ -1,28 +1,23 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+import { Injectable, ExecutionContext } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { Observable } from 'rxjs';
+import { Reflector } from '@nestjs/core';
 
 @Injectable()
-export class JWTGuard extends AuthGuard('jwt') implements CanActivate {
-  constructor(private readonly ref: Reflector) {
+export class JWTGuard extends AuthGuard('jwt') {
+  constructor(private reflector: Reflector) {
     super();
   }
 
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
-    const request = context.switchToHttp().getRequest();
-    if (request.url.startsWith('/api/uploads')) {
-      return true; // Permite acceso sin autenticación
-    }
-
-    const isPublic = this.ref.getAllAndOverride<boolean>('CLAVE_PUBLICA', [
+  canActivate(context: ExecutionContext) {
+    const isPublic = this.reflector.getAllAndOverride<boolean>('CLAVE_PUBLICA', [
       context.getHandler(),
       context.getClass(),
     ]);
-
     if (isPublic) return true;
+
+    const request = context.switchToHttp().getRequest();
+    if (request.url.startsWith('/api/uploads')) return true;
+
     return super.canActivate(context);
   }
 }

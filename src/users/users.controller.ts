@@ -1,47 +1,37 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  ParseUUIDPipe,
-} from '@nestjs/common';
+// src/users/users.controller.ts
+import { Controller, Get, Post, Body, Param, Put, Delete, Query } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UserPaginator } from './dto/user.paginator.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UserPaginatorDto } from './dto/user.paginator.dto';
+import { ParseUUIDPipe } from '@nestjs/common';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Post()
+  async create(@Body() createUserDto: CreateUserDto) {
+    return this.usersService.create(createUserDto);
+  }
+
   @Get()
-  findAll(@Query() query: UserPaginator) {
-    return this.usersService.findAll(query);
+  async findAll(@Query() query: UserPaginatorDto) {
+    return this.usersService.findAll(query.page, query.perPage);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.findOne(id);
   }
 
-  @Post()
-  create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: Partial<CreateUserDto>) {
-    return this.usersService.update(id, dto);
+  @Put(':id')
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.update(id, updateUserDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string) {
     return this.usersService.remove(id);
   }
 }
-
-// Expone las rutas /users, /users/:id, etc.
-// No tiene lógica: solo llama al UsersService.

@@ -1,48 +1,45 @@
-// import { Injectable } from '@nestjs/common';
-
-// @Injectable()
-// export class UsersService {}
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UserPaginator } from './dto/user.paginator.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { USER_CONSTANTS } from './constants/imports';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
-  async findAll(p: UserPaginator) {
-    let where: any = { deleted: false };
+  // Crear un usuario
+  async create(createUserDto: CreateUserDto) {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { username: createUserDto.username },
+    });
 
-    if (p.name) {
-      where.OR = [
-        { name: { contains: p.name, mode: 'insensitive' } },
-        { last_name: { contains: p.name, mode: 'insensitive' } },
-      ];
+    if (existingUser) {
+      throw new BadRequestException(USER_CONSTANTS.userAlreadyExists);
     }
 
-    if (p.id) where.id_visible = p.id;
-    if (p.mail) where.mail = { contains: p.mail };
-    if (p.username) where.username = { contains: p.username };
-    if (p.active !== undefined) where.active = p.active;
-    if (p.root) where.root = p.root;
+    const hashedPassword = await bcrypt.hash(createUserDto.password, 12);
 
-    const totalRecords = await this.prisma.user.count({ where });
-    const lastPage = Math.ceil(totalRecords / (p.perPage ?? 10));
-    const skip = (p.page && p.perPage) ? (p.page - 1) * p.perPage : undefined;
-    const take = p.perPage ?? 10;
+    const newUser = await this.prisma.user.create({
+      data: {
+        ...createUserDto,
+        password: hashedPassword,
+      },
+    });
 
-    const orderBy = p.sortBy
-      ? { [p.sortByProperty ?? 'id']: p.sortBy }
-      : undefined;
+    return newUser;
+  }
 
-    const data = await this.prisma.user.findMany({
-      where,
+  // Obtener todos los usuarios con paginación
+  async findAll(page: string = '1', perPage: string = '10') {
+    const skip = (parseInt(page) - 1) * parseInt(perPage);
+    const take = parseInt(perPage);
+
+    const users = await this.prisma.user.findMany({
       skip,
       take,
-      orderBy,
+      where: { deleted: false },
       include: {
         userCity: {
           where: { city: { active: true, deleted: false } },
@@ -51,15 +48,21 @@ export class UsersService {
       },
     });
 
-    const metadata = p.page && p.perPage
-      ? { page: p.page, totalRecords, lastPage }
-      : { totalRecords };
+    const totalRecords = await this.prisma.user.count({ where: { deleted: false } });
+    const lastPage = Math.ceil(totalRecords / take);
 
-    return { data, metadata };
+    return {
+      data: users,
+      metadata: {
+        totalRecords,
+        lastPage,
+      },
+    };
   }
 
+  // Obtener un usuario por ID
   async findOne(id: string) {
-    return this.prisma.user.findFirst({
+    const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
         userCity: {
@@ -68,77 +71,73 @@ export class UsersService {
         },
       },
     });
-  }
 
-  async update(id: string, updateUserDto: Partial<CreateUserDto>) {
-    const user = await this.prisma.user.findFirst({ where: { id } });
-    if (!user) throw new NotFoundException('User not found');
-
-    if (updateUserDto.old_password) {
-      const same = bcrypt.compareSync(updateUserDto.old_password, user.password);
-      if (!same) throw new UnauthorizedException('Wrong password');
-      const hashPassword = bcrypt.hashSync(updateUserDto.password, 12);
-
-      const result = await this.prisma.user.update({
-        where: { id },
-        data: {
-          password: hashPassword,
-          otp: updateUserDto.otp,
-        },
-      });
-
-      const { password: _, ...updateUser } = result;
-      return updateUser;
-    } else {
-      const { deletedCityID = [], updateCityID = [], ...rest } = updateUserDto;
-
-      const result = await this.prisma.user.update({
-        where: { id },
-        data: {
-          ...rest,
-          userCity: {
-            create: updateCityID.map((c) => ({ cityID: c })),
-            deleteMany: deletedCityID.map((c) => ({ cityID: c })),
-          },
-        },
-        include: {
-          userCity: {
-            where: { city: { active: true, deleted: false } },
-            include: { city: true },
-          },
-        },
-      });
-
-      const { password: _, ...user } = result;
-      return user;
+    if (!user) {
+      throw new NotFoundException(USER_CONSTANTS.userNotFound);
     }
+
+    return user;
   }
 
-  async remove(id: string) {
-    const user = await this.findOne(id);
-    if (!user) throw new NotFoundException('User not found');
-
-    await this.update(id, {
-      deleted: true,
-      deleteDate: new Date(),
+  // Actualizar un usuario
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
     });
 
-    return 'User removed';
-  }
+    if (!user) {
+      throw new NotFoundException(USER_CONSTANTS.userNotFound);
+    }
 
-  async create(data: CreateUserDto) {
-    const hashPassword = data.password
-      ? bcrypt.hashSync(data.password, 12)
-      : undefined;
+    const {
+      old_password,
+      password,
+      updateCityID = [],
+      deletedCityID = [],
+      ...rest
+    } = updateUserDto;
 
-    return this.prisma.user.create({
+    let dataToUpdate: any = { ...rest };
+
+    if (old_password) {
+      const passwordMatch = await bcrypt.compare(old_password, user.password);
+      if (!passwordMatch) {
+        throw new BadRequestException(USER_CONSTANTS.wrongPassword);
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 12);
+      dataToUpdate.password = hashedPassword;
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id },
       data: {
-        ...data,
-        password: hashPassword,
+        ...dataToUpdate,
+        userCity: {
+          create: updateCityID.map((cityID) => ({ cityID })),
+          deleteMany: deletedCityID.map((cityID) => ({ cityID })),
+        },
       },
     });
+
+    return updatedUser;
+  }
+
+  // Eliminar un usuario (marcar como eliminado)
+  async remove(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!user) {
+      throw new NotFoundException(USER_CONSTANTS.userNotFound);
+    }
+
+    await this.prisma.user.update({
+      where: { id },
+      data: { deleted: true, deletedDate: new Date() },
+    });
+
+    return USER_CONSTANTS.userDeleted;
   }
 }
-
-// Aquí es donde Prisma conecta con modelo User:
-// Este es el servicio principal donde usamos Prisma para CRUD

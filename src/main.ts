@@ -3,22 +3,19 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
 
-dotenv.config(); // Esto carga las variables de entorno desde el archivo .env
+dotenv.config();
 
 async function bootstrap() {
-  const logger = new Logger('MAIN');
   const app = await NestFactory.create(AppModule);
+  const logger = new Logger('MAIN');
 
   app.enableCors();
-
   app.setGlobalPrefix('api');
-
-  
 
   app.useGlobalPipes(
     new ValidationPipe({
       exceptionFactory: (errors) => {
-        console.log(errors); // Esto te muestra exactamente qué falló
+        logger.error('Validation failed', errors);
         return new BadRequestException(errors);
       },
       whitelist: true,
@@ -27,7 +24,10 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(3000);
-  logger.log(`RUNNING ON PORT: ${3000}`);
+  const PORT = process.env.PORT || 3000;
+
+  await app.listen(PORT);
+  logger.log(`RUNNING ON PORT: ${PORT}`);
 }
+
 bootstrap();

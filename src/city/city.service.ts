@@ -45,7 +45,7 @@ export class CityService {
   }
 
   async update(id: string, updateCityDto: UpdateCityDto) {
-    await this.findOne(id); // Verifica si la ciudad existe
+    await this.findOne(id);
     return this.prisma.city.update({
       where: { id },
       data: updateCityDto,
@@ -53,7 +53,7 @@ export class CityService {
   }
 
   async remove(id: string) {
-    await this.findOne(id); // Verifica si la ciudad existe
+    await this.findOne(id); 
     return this.prisma.city.delete({ where: { id } });
   }
 }
